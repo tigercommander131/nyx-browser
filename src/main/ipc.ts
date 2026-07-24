@@ -29,7 +29,7 @@ import {
 import { setAdblockEnabled, setAdblockLevel } from './adblock'
 import { getSettings, updateSettings } from './settings'
 import { toggleBookmark, listBookmarks, deleteBookmark, markRead } from './bookmarks'
-import { checkForUpdates } from './updates'
+import { checkForUpdates, openUpdateDownload } from './updates'
 import { SEARCH_ENGINES, Settings, Suggestion } from '../shared/types'
 
 export function initIpc(): void {
@@ -174,6 +174,8 @@ export function initIpc(): void {
       }
       case 'checkUpdates':
         return await checkForUpdates((p['force'] as boolean) ?? false)
+      case 'openUpdate':
+        return await openUpdateDownload()
       case 'reopenClosedTab':
         w.reopenClosedTab()
         return null

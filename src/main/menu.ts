@@ -1,4 +1,4 @@
-import { clipboard, dialog, Menu, MenuItemConstructorOptions } from 'electron'
+import { clipboard, dialog, Menu, MenuItemConstructorOptions, shell } from 'electron'
 import { broadcastState, focusedNyxWindow, NyxWindow } from './browser'
 import { toggleBookmark } from './bookmarks'
 import { checkForUpdates } from './updates'
@@ -26,11 +26,23 @@ export function buildMenu(): void {
           label: 'Check for Updates…',
           click: async () => {
             const s = await checkForUpdates(true)
-            void dialog.showMessageBox({
-              type: 'info',
-              message: `Nyx ${s.appVersion}`,
-              detail: `Electron ${s.electronVersion}\nFilter lists refreshed just now.`
-            })
+            if (s.appUpdate) {
+              const { response } = await dialog.showMessageBox({
+                type: 'info',
+                buttons: ['Download', 'Later'],
+                defaultId: 0,
+                cancelId: 1,
+                message: `Nyx ${s.appUpdate.version} is available`,
+                detail: `You're on ${s.appVersion}. Drag the new Nyx into Applications to update.`
+              })
+              if (response === 0) void shell.openExternal(s.appUpdate.url)
+            } else {
+              void dialog.showMessageBox({
+                type: 'info',
+                message: `Nyx ${s.appVersion} — up to date`,
+                detail: `Electron ${s.electronVersion}\nFilter lists refreshed just now.`
+              })
+            }
           }
         },
         { type: 'separator' },

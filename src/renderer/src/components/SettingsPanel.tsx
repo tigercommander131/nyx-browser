@@ -244,11 +244,33 @@ export function SettingsPanel({ settings: s }: { settings: Settings }): React.JS
 
       <h2>Updates</h2>
       <Row
-        label={updates ? `Nyx ${updates.appVersion} · Electron ${updates.electronVersion}` : 'Nyx'}
+        label={
+          updates?.appUpdate
+            ? `Nyx ${updates.appUpdate.version} is available`
+            : updates
+              ? `Nyx ${updates.appVersion} — up to date`
+              : 'Nyx'
+        }
+        hint={
+          updates?.appUpdate
+            ? `You're on ${updates.appVersion}. Checked automatically on every launch.`
+            : 'New releases are checked on launch and every 6 hours'
+        }
+      >
+        {updates?.appUpdate ? (
+          <button className="set-btn" onClick={() => void window.nyx.cmd('openUpdate')}>
+            Download Update
+          </button>
+        ) : (
+          <span className="set-hint">{updates ? `Electron ${updates.electronVersion}` : '…'}</span>
+        )}
+      </Row>
+      <Row
+        label="Content filters"
         hint={
           updates
             ? updates.filtersAgeDays === 0
-              ? 'Filter lists updated today · checked on every launch'
+              ? 'Filter lists updated today · refreshed weekly'
               : `Filter lists updated ${updates.filtersAgeDays} day${updates.filtersAgeDays === 1 ? '' : 's'} ago · refreshed weekly`
             : 'Checking…'
         }

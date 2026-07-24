@@ -6,6 +6,7 @@
   "main": "out/main/index.js",
   "author": "Joel Lewis",
   "private": true,
+  "nyxUpdateRepo": "joellewis7522345-max/nyx-browser",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",

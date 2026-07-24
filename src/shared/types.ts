@@ -156,6 +156,7 @@ export interface UpdateStatus {
   filtersUpdatedAt: number
   filtersAgeDays: number
   refreshed: boolean
+  appUpdate: { version: string; url: string } | null
 }
 
 export type LibrarySection =
