@@ -5,6 +5,7 @@ import {
   SEARCH_ENGINES,
   Settings,
   ThemeId,
+  UpdateProgress,
   UpdateStatus
 } from '../../../shared/types'
 
@@ -46,7 +47,27 @@ const THEMES: { id: ThemeId; name: string; bg: string; fg: string }[] = [
   { id: 'light', name: 'Light', bg: '#F2EFF9', fg: '#6A5CD0' }
 ]
 
-export function SettingsPanel({ settings: s }: { settings: Settings }): React.JSX.Element {
+function updateButtonLabel(p: UpdateProgress | null): string {
+  if (!p) return 'Update & Relaunch'
+  switch (p.phase) {
+    case 'downloading':
+      return p.pct !== null ? `Downloading ${p.pct}%…` : 'Downloading…'
+    case 'verifying':
+      return 'Verifying…'
+    case 'installing':
+      return 'Relaunching…'
+    case 'error':
+      return 'Retry Update'
+  }
+}
+
+export function SettingsPanel({
+  settings: s,
+  updateProg
+}: {
+  settings: Settings
+  updateProg: UpdateProgress | null
+}): React.JSX.Element {
   const [updates, setUpdates] = useState<UpdateStatus | null>(null)
   const [checking, setChecking] = useState(false)
   const [customAccent, setCustomAccent] = useState(s.accent)
@@ -252,14 +273,20 @@ export function SettingsPanel({ settings: s }: { settings: Settings }): React.JS
               : 'Nyx'
         }
         hint={
-          updates?.appUpdate
-            ? `You're on ${updates.appVersion}. Checked automatically on every launch.`
-            : 'New releases are checked on launch and every 6 hours'
+          updateProg?.phase === 'error'
+            ? `Update failed: ${updateProg.message ?? 'unknown error'}`
+            : updates?.appUpdate
+              ? `You're on ${updates.appVersion}. Nyx installs the update and relaunches itself.`
+              : 'New releases are checked on launch and every 6 hours'
         }
       >
         {updates?.appUpdate ? (
-          <button className="set-btn" onClick={() => void window.nyx.cmd('openUpdate')}>
-            Download Update
+          <button
+            className="set-btn"
+            disabled={!!updateProg && updateProg.phase !== 'error'}
+            onClick={() => void window.nyx.cmd('installUpdate')}
+          >
+            {updateButtonLabel(updateProg)}
           </button>
         ) : (
           <span className="set-hint">{updates ? `Electron ${updates.electronVersion}` : '…'}</span>

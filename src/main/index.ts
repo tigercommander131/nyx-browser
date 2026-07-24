@@ -11,6 +11,7 @@ import { initIpc } from './ipc'
 import { buildMenu } from './menu'
 import { initProfiles } from './profiles'
 import { initPasswords, handleCapture } from './passwords'
+import { installFromArchive } from './selfUpdate'
 import { loadSession, saveSession, SessionData } from './sessionStore'
 import { NyxWindow, nyxWindows, nyxWindowFromPage, markQuitting } from './browser'
 
@@ -132,5 +133,6 @@ app.on('window-all-closed', () => {
 // Handles for driving the app over the inspector protocol during QA.
 ;(globalThis as Record<string, unknown>).nyxDebug = {
   windows: nyxWindows,
-  newIncognito: (): NyxWindow => new NyxWindow({ incognito: true })
+  newIncognito: (): NyxWindow => new NyxWindow({ incognito: true }),
+  installFromArchive
 }

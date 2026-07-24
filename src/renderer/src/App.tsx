@@ -4,6 +4,7 @@ import type {
   FindResult,
   LibrarySection,
   Suggestion,
+  UpdateProgress,
   WindowSnapshot
 } from '../../shared/types'
 import { TabStrip } from './components/TabStrip'
@@ -23,6 +24,7 @@ export function App(): React.JSX.Element {
   const [findResult, setFindResult] = useState<FindResult | null>(null)
   const [focusTick, setFocusTick] = useState(0)
   const [library, setLibrary] = useState<LibrarySection | null>(null)
+  const [updateProg, setUpdateProg] = useState<UpdateProgress | null>(null)
 
   const [editing, setEditing] = useState(false)
   const [obText, setObText] = useState('')
@@ -55,6 +57,9 @@ export function App(): React.JSX.Element {
         case 'downloads':
           setDownloads(ev.downloads)
           if (ev.downloads.some((d) => d.state === 'progressing')) setShelfHidden(false)
+          break
+        case 'updateProgress':
+          setUpdateProg(ev.progress)
           break
       }
     })
@@ -166,6 +171,7 @@ export function App(): React.JSX.Element {
           section={library}
           downloads={downloads}
           settings={snap.settings}
+          updateProg={updateProg}
           onSectionChange={setLibrary}
           onClose={() => setLibrary(null)}
           onNavigate={(url) => {

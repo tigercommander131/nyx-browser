@@ -1,11 +1,20 @@
 import { app, dialog, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
-import type { UpdateStatus } from '../shared/types'
+import type { UpdateProgress, UpdateStatus } from '../shared/types'
 import { filtersUpdatedAt, refreshFilters } from './adblock'
+import { canSelfUpdate, runSelfUpdate } from './selfUpdate'
+import { nyxWindows } from './browser'
 
 const FILTER_MAX_AGE_DAYS = 7
 const RECHECK_INTERVAL = 6 * 60 * 60 * 1000
+
+export interface AppUpdate {
+  version: string
+  url: string
+  zipUrl?: string
+  sigUrl?: string
+}
 
 function ageDays(ts: number): number {
   if (!ts) return Infinity
@@ -33,7 +42,7 @@ function isNewer(a: string, b: string): boolean {
   return false
 }
 
-export async function checkAppUpdate(): Promise<{ version: string; url: string } | null> {
+export async function checkAppUpdate(): Promise<AppUpdate | null> {
   const repo = updateRepo()
   if (!repo) return null
   const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
@@ -47,15 +56,58 @@ export async function checkAppUpdate(): Promise<{ version: string; url: string }
   }
   const version = String(rel.tag_name ?? '').replace(/^v/, '')
   if (!version || !isNewer(version, app.getVersion())) return null
-  const asset = (rel.assets ?? []).find((a) => a.name?.endsWith('.dmg'))
-  return { version, url: asset?.browser_download_url ?? rel.html_url ?? '' }
+  const assets = rel.assets ?? []
+  const find = (suffix: string): string | undefined =>
+    assets.find((a) => a.name?.endsWith(suffix))?.browser_download_url
+  return {
+    version,
+    url: find('.dmg') ?? rel.html_url ?? '',
+    zipUrl: find('.zip'),
+    sigUrl: find('.sig')
+  }
+}
+
+function broadcastProgress(progress: UpdateProgress): void {
+  for (const w of nyxWindows) w.sendEvent({ type: 'updateProgress', progress })
+}
+
+// One-click path when possible; dmg download as the fallback.
+export async function startInstall(u: AppUpdate): Promise<boolean> {
+  if (u.zipUrl && u.sigUrl && canSelfUpdate().ok) {
+    runSelfUpdate(u.zipUrl, u.sigUrl, broadcastProgress).catch((err) => {
+      void dialog.showMessageBox({
+        type: 'warning',
+        message: 'Update failed',
+        detail:
+          (err instanceof Error ? err.message : String(err)) +
+          '\nYou can still download the new version manually.'
+      })
+    })
+    return true
+  }
+  if (u.url) void shell.openExternal(u.url)
+  return false
+}
+
+export async function promptAndInstall(u: AppUpdate): Promise<void> {
+  const selfOk = !!(u.zipUrl && u.sigUrl && canSelfUpdate().ok)
+  const { response } = await dialog.showMessageBox({
+    type: 'info',
+    buttons: [selfOk ? 'Update & Relaunch' : 'Download', 'Later'],
+    defaultId: 0,
+    cancelId: 1,
+    message: `Nyx ${u.version} is available`,
+    detail: selfOk
+      ? `You're on ${app.getVersion()}. Nyx updates itself and relaunches — takes under a minute.`
+      : `You're on ${app.getVersion()}. The download opens in your browser — drag the new Nyx into Applications to update.`
+  })
+  if (response === 0) await startInstall(u)
 }
 
 export async function openUpdateDownload(): Promise<boolean> {
   const u = await checkAppUpdate().catch(() => null)
-  if (!u?.url) return false
-  void shell.openExternal(u.url)
-  return true
+  if (!u) return false
+  return await startInstall(u)
 }
 
 let notifiedVersion: string | null = null
@@ -65,15 +117,7 @@ async function notifyIfUpdate(): Promise<void> {
     const u = await checkAppUpdate()
     if (!u || u.version === notifiedVersion) return
     notifiedVersion = u.version
-    const { response } = await dialog.showMessageBox({
-      type: 'info',
-      buttons: ['Download', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      message: `Nyx ${u.version} is available`,
-      detail: `You're on ${app.getVersion()}. The download opens in your browser — drag the new Nyx into Applications to update.`
-    })
-    if (response === 0) void shell.openExternal(u.url)
+    await promptAndInstall(u)
   } catch {
     // offline or rate-limited; try again next tick
   }
@@ -93,7 +137,7 @@ export async function checkForUpdates(force = false): Promise<UpdateStatus> {
     filtersUpdatedAt: ts,
     filtersAgeDays: Math.max(0, Math.floor(ageDays(ts))),
     refreshed,
-    appUpdate
+    appUpdate: appUpdate ? { version: appUpdate.version, url: appUpdate.url } : null
   }
 }
 

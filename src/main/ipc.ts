@@ -174,7 +174,7 @@ export function initIpc(): void {
       }
       case 'checkUpdates':
         return await checkForUpdates((p['force'] as boolean) ?? false)
-      case 'openUpdate':
+      case 'installUpdate':
         return await openUpdateDownload()
       case 'reopenClosedTab':
         w.reopenClosedTab()

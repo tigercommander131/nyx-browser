@@ -167,6 +167,12 @@ export type LibrarySection =
   | 'passwords'
   | 'settings'
 
+export interface UpdateProgress {
+  phase: 'downloading' | 'verifying' | 'installing' | 'error'
+  pct: number | null
+  message?: string
+}
+
 export type ChromeEvent =
   | { type: 'state'; snapshot: WindowSnapshot }
   | { type: 'focusOmnibox' }
@@ -174,6 +180,7 @@ export type ChromeEvent =
   | { type: 'findResult'; result: FindResult }
   | { type: 'openLibrary'; section: LibrarySection }
   | { type: 'downloads'; downloads: DownloadInfo[] }
+  | { type: 'updateProgress'; progress: UpdateProgress }
 
 export const CHROME_HEIGHTS: Record<Density, number> = { comfortable: 84, compact: 70 }
 // Vertical tabs: only the toolbar sits above the page.

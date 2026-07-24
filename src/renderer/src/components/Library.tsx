@@ -5,7 +5,8 @@ import type {
   DownloadInfo,
   HistoryEntry,
   LibrarySection,
-  Settings
+  Settings,
+  UpdateProgress
 } from '../../../shared/types'
 import { SettingsPanel } from './SettingsPanel'
 
@@ -13,6 +14,7 @@ interface Props {
   section: LibrarySection
   downloads: DownloadInfo[]
   settings: Settings
+  updateProg: UpdateProgress | null
   onSectionChange: (s: LibrarySection) => void
   onClose: () => void
   onNavigate: (url: string) => void
@@ -138,7 +140,7 @@ export function Library(p: Props): React.JSX.Element {
       </div>
       <div className="library-list">
         {p.section === 'settings' ? (
-          <SettingsPanel settings={p.settings} />
+          <SettingsPanel settings={p.settings} updateProg={p.updateProg} />
         ) : p.section === 'history' ? (
           <>
             {entries.map((e) => (

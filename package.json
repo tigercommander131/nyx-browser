@@ -1,8 +1,8 @@
 {
   "name": "nyx-electron",
   "productName": "Nyx",
-  "version": "0.2.0",
-  "description": "Nyx browser — fast, private, yours",
+  "version": "0.3.0",
+  "description": "Nyx browser \u2014 fast, private, yours",
   "main": "out/main/index.js",
   "author": "Joel Lewis",
   "private": true,
@@ -12,7 +12,8 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "dist": "electron-vite build && electron-builder --mac dmg"
+    "dist": "electron-vite build && electron-builder --mac dmg",
+    "release": "npm run dist && node scripts/sign-release.mjs"
   },
   "build": {
     "appId": "com.nyx.electron",
@@ -35,14 +36,20 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLName": "Web URLs",
-            "CFBundleURLSchemes": ["http", "https"]
+            "CFBundleURLSchemes": [
+              "http",
+              "https"
+            ]
           }
         ],
         "CFBundleDocumentTypes": [
           {
             "CFBundleTypeName": "HTML document",
             "CFBundleTypeRole": "Viewer",
-            "LSItemContentTypes": ["public.html", "public.xhtml"]
+            "LSItemContentTypes": [
+              "public.html",
+              "public.xhtml"
+            ]
           }
         ],
         "NSCameraUsageDescription": "Sites you allow can use the camera.",
