@@ -1,0 +1,34 @@
+{
+  "name": "nyx-electron",
+  "productName": "Nyx Electron",
+  "version": "0.1.0",
+  "description": "Nyx browser — Electron edition",
+  "main": "out/main/index.js",
+  "author": "Joel Lewis",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "rebuild": "electron-rebuild -f -w better-sqlite3"
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.18.1",
+    "better-sqlite3": "^13.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^43.2.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "ws": "^8.21.1"
+  }
+}
