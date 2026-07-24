@@ -19,15 +19,15 @@ export function initHistory(): void {
   CREATE INDEX IF NOT EXISTS idx_history_rank ON history(visit_count DESC, last_visit DESC);`)
 }
 
-export function recordVisit(url: string, title: string): void {
+export function recordVisit(url: string, title: string, profile = ''): void {
   if (!/^https?:/.test(url)) return
   db.prepare(
-    `INSERT INTO history (url, title, visit_count, last_visit) VALUES (?, ?, 1, ?)
+    `INSERT INTO history (url, title, visit_count, last_visit, profile) VALUES (?, ?, 1, ?, ?)
      ON CONFLICT(url) DO UPDATE SET
        visit_count = visit_count + 1,
        last_visit = excluded.last_visit,
        title = CASE WHEN excluded.title != '' THEN excluded.title ELSE history.title END`
-  ).run(url, title, Date.now() / 1000)
+  ).run(url, title, Date.now() / 1000, profile === 'default' ? '' : profile)
 }
 
 export function updateTitle(url: string, title: string): void {

@@ -1,12 +1,15 @@
 import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import type { TabGroup } from '../shared/types'
 
-// Same shape as Swift Nyx's session.json (its files restore unchanged).
+// Superset of Swift Nyx's session.json shape (its files restore unchanged;
+// the extra fields are all optional).
 export interface SessionTab {
   url: string
   title: string
   pinned: boolean
+  groupId?: string
 }
 
 export interface SessionWindow {
@@ -15,8 +18,12 @@ export interface SessionWindow {
   w: number
   h: number
   activeIndex: number
-  groups: unknown[]
+  groups: TabGroup[]
   tabs: SessionTab[]
+  vertical?: boolean
+  splitIndex?: number
+  splitFraction?: number
+  profile?: string
 }
 
 export interface SessionData {
@@ -31,6 +38,11 @@ export function loadSession(): SessionData | null {
   try {
     const data = JSON.parse(fs.readFileSync(sessionPath(), 'utf8')) as SessionData
     if (!Array.isArray(data.windows)) return null
+    // Swift group entries may not match our TabGroup shape; drop unusable ones.
+    for (const w of data.windows) {
+      if (!Array.isArray(w.groups)) w.groups = []
+      w.groups = w.groups.filter((g) => g && typeof g.id === 'string' && typeof g.name === 'string')
+    }
     return data
   } catch {
     return null

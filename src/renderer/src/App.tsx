@@ -125,10 +125,8 @@ export function App(): React.JSX.Element {
 
   if (!snap) return <div className="chrome" />
 
-  return (
-    <div className={'chrome' + (snap.incognito ? ' incognito' : '')}>
-      <TabStrip snap={snap} />
-      <Toolbar
+  const toolbar = (
+    <Toolbar
         snap={snap}
         activeTab={activeTab}
         focusTick={focusTick}
@@ -147,48 +145,114 @@ export function App(): React.JSX.Element {
         onOpenDownloads={() => setLibrary((cur) => (cur === 'downloads' ? null : 'downloads'))}
         onOpenSettings={() => setLibrary((cur) => (cur === 'settings' ? null : 'settings'))}
       />
-      {findOpen && (
-        <FindBar
-          focusTick={findTick}
-          result={findResult}
-          onClose={() => {
-            setFindOpen(false)
-            setFindResult(null)
-            window.nyx.cmd('findStop')
+  )
+
+  const findbar = findOpen && (
+    <FindBar
+      focusTick={findTick}
+      result={findResult}
+      onClose={() => {
+        setFindOpen(false)
+        setFindResult(null)
+        window.nyx.cmd('findStop')
+      }}
+    />
+  )
+
+  const canvas = (
+    <div className="canvas">
+      {library !== null ? (
+        <Library
+          section={library}
+          downloads={downloads}
+          settings={snap.settings}
+          onSectionChange={setLibrary}
+          onClose={() => setLibrary(null)}
+          onNavigate={(url) => {
+            setLibrary(null)
+            window.nyx.cmd('navigate', { input: url })
           }}
         />
-      )}
-      <div className="canvas">
-        {library !== null ? (
-          <Library
-            section={library}
-            downloads={downloads}
-            settings={snap.settings}
-            onSectionChange={setLibrary}
-            onClose={() => setLibrary(null)}
-            onNavigate={(url) => {
-              setLibrary(null)
-              window.nyx.cmd('navigate', { input: url })
-            }}
-          />
-        ) : suggestionsOpen ? (
-          <SuggestionsPanel
-            suggestions={suggestions}
-            selIndex={selIndex}
-            onHover={setSelIndex}
-            onPick={(s) => navigate(s.url)}
-          />
-        ) : activeTab && !activeTab.url ? (
-          <StartPage settings={snap.settings} />
-        ) : null}
-      </div>
-      {shelfVisible && (
-        <Shelf
-          downloads={downloads}
-          onDismiss={() => setShelfHidden(true)}
-          onShowAll={() => setLibrary('downloads')}
+      ) : suggestionsOpen ? (
+        <SuggestionsPanel
+          suggestions={suggestions}
+          selIndex={selIndex}
+          onHover={setSelIndex}
+          onPick={(s) => navigate(s.url)}
         />
-      )}
+      ) : activeTab && !activeTab.url ? (
+        <StartPage settings={snap.settings} />
+      ) : null}
+      {snap.splitTabId &&
+        snap.splitTabId !== snap.activeTabId &&
+        library === null &&
+        !suggestionsOpen &&
+        activeTab?.url && <SplitDivider fraction={snap.splitFraction} />}
     </div>
+  )
+
+  const shelf = shelfVisible && (
+    <Shelf
+      downloads={downloads}
+      onDismiss={() => setShelfHidden(true)}
+      onShowAll={() => setLibrary('downloads')}
+    />
+  )
+
+  if (snap.vertical) {
+    return (
+      <div className={'chrome vertical' + (snap.incognito ? ' incognito' : '')}>
+        <aside className="sidebar">
+          <TabStrip snap={snap} vertical />
+        </aside>
+        <div className="main-col">
+          {toolbar}
+          {findbar}
+          {canvas}
+          {shelf}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={'chrome' + (snap.incognito ? ' incognito' : '')}>
+      <TabStrip snap={snap} />
+      {toolbar}
+      {findbar}
+      {canvas}
+      {shelf}
+    </div>
+  )
+}
+
+// Sits in the 6px gap between the two split WebContentsViews (the only strip
+// of the content area where the chrome can receive mouse events).
+function SplitDivider({ fraction }: { fraction: number }): React.JSX.Element {
+  const onMouseDown = (e: React.MouseEvent): void => {
+    e.preventDefault()
+    const canvas = (e.currentTarget as HTMLElement).parentElement!
+    const rect = canvas.getBoundingClientRect()
+    let raf = 0
+    const move = (ev: MouseEvent): void => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const f = (ev.clientX - rect.left) / Math.max(1, rect.width - 6)
+        window.nyx.cmd('setSplitFraction', { fraction: Math.min(0.85, Math.max(0.15, f)) })
+      })
+    }
+    const up = (): void => {
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+  return (
+    <div
+      className="split-divider"
+      style={{ left: `calc((100% - 6px) * ${fraction})` }}
+      onMouseDown={onMouseDown}
+    />
   )
 }

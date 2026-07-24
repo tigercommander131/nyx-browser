@@ -1,4 +1,5 @@
-import { app, session } from 'electron'
+import { app, ipcMain, session, BrowserWindow } from 'electron'
+import path from 'node:path'
 import { initSettings } from './settings'
 import { initHistory } from './history'
 import { initBookmarks } from './bookmarks'
@@ -8,8 +9,42 @@ import { initUpdates } from './updates'
 import { clearOnQuit } from './privacy'
 import { initIpc } from './ipc'
 import { buildMenu } from './menu'
+import { initProfiles } from './profiles'
+import { initPasswords, handleCapture } from './passwords'
 import { loadSession, saveSession, SessionData } from './sessionStore'
-import { NyxWindow, nyxWindows, markQuitting } from './browser'
+import { NyxWindow, nyxWindows, nyxWindowFromPage, markQuitting } from './browser'
+
+// The app is named "Nyx" but must NOT share Swift Nyx's data directory
+// (~/Library/Application Support/Nyx) — pin ours explicitly.
+app.setPath('userData', path.join(app.getPath('appData'), 'Nyx Electron'))
+
+// Double-launching the .app must focus the running instance, not spawn a
+// second one against the same databases.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+}
+app.on('second-instance', () => {
+  const w = nyxWindows[0]
+  if (w) {
+    if (w.win.isMinimized()) w.win.restore()
+    w.win.focus()
+  } else {
+    new NyxWindow({})
+  }
+})
+
+// Links opened from other apps (and default-browser duty).
+let pendingUrl: string | null = null
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (app.isReady() && nyxWindows.length > 0) {
+    const w = nyxWindows[0]
+    w.newTab(url, true)
+    w.win.focus()
+  } else {
+    pendingUrl = url
+  }
+})
 
 // QA runs drive the app over CDP while the window sits behind the terminal;
 // keep occluded windows painting so screenshots capture live pixels.
@@ -41,16 +76,35 @@ app.whenReady().then(() => {
   initSettings()
   initHistory()
   initBookmarks()
+  initProfiles()
+  initPasswords()
   initIpc()
   buildMenu()
   void initAdblock()
   initUpdates()
+
+  // Password capture from page preloads; ignored for incognito windows.
+  ipcMain.on('nyx:pwd-capture', (event, payload: { origin: string; username: string; password: string }) => {
+    const w = nyxWindowFromPage(event.sender)
+    if (!w || w.incognito) return
+    if (typeof payload?.origin !== 'string' || typeof payload?.password !== 'string') return
+    handleCapture(
+      BrowserWindow.fromWebContents(event.sender) ?? w.win,
+      payload.origin,
+      String(payload.username ?? ''),
+      payload.password
+    )
+  })
 
   const restored = loadSession()
   if (restored && restored.windows.length > 0) {
     for (const sw of restored.windows) new NyxWindow({ restore: sw })
   } else {
     new NyxWindow({})
+  }
+  if (pendingUrl) {
+    nyxWindows[0]?.newTab(pendingUrl, true)
+    pendingUrl = null
   }
 
   setInterval(saveSessionNow, 15000)

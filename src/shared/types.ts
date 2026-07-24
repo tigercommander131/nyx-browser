@@ -65,6 +65,30 @@ export interface TabInfo {
   audible: boolean
   muted: boolean
   bookmarked: boolean
+  groupId: string | null
+  readerable: boolean
+}
+
+export interface TabGroup {
+  id: string
+  name: string
+  color: string
+  collapsed: boolean
+}
+
+export const GROUP_COLORS = ['#8B7CF6', '#6EA8FE', '#4DD4AC', '#FFA94D', '#FF6B9D', '#A9E34B']
+
+export interface ProfileInfo {
+  id: string
+  name: string
+  color: string
+}
+
+// Passwords are never included; reveal/copy go through the Touch ID gate.
+export interface CredentialInfo {
+  id: string
+  origin: string
+  username: string
 }
 
 export interface WindowSnapshot {
@@ -72,6 +96,11 @@ export interface WindowSnapshot {
   incognito: boolean
   tabs: TabInfo[]
   activeTabId: string | null
+  groups: TabGroup[]
+  vertical: boolean
+  splitTabId: string | null
+  splitFraction: number
+  profile: ProfileInfo | null
   settings: Settings
 }
 
@@ -129,7 +158,13 @@ export interface UpdateStatus {
   refreshed: boolean
 }
 
-export type LibrarySection = 'history' | 'downloads' | 'bookmarks' | 'reading' | 'settings'
+export type LibrarySection =
+  | 'history'
+  | 'downloads'
+  | 'bookmarks'
+  | 'reading'
+  | 'passwords'
+  | 'settings'
 
 export type ChromeEvent =
   | { type: 'state'; snapshot: WindowSnapshot }
@@ -140,6 +175,10 @@ export type ChromeEvent =
   | { type: 'downloads'; downloads: DownloadInfo[] }
 
 export const CHROME_HEIGHTS: Record<Density, number> = { comfortable: 84, compact: 70 }
+// Vertical tabs: only the toolbar sits above the page.
+export const TOOLBAR_HEIGHTS: Record<Density, number> = { comfortable: 46, compact: 38 }
+export const SIDEBAR_WIDTH = 240
+export const SPLIT_GAP = 6
 export const FINDBAR_HEIGHT = 40
 export const SHELF_HEIGHT = 56
 

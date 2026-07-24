@@ -1,8 +1,8 @@
 {
   "name": "nyx-electron",
-  "productName": "Nyx Electron",
-  "version": "0.1.0",
-  "description": "Nyx browser — Electron edition",
+  "productName": "Nyx",
+  "version": "0.2.0",
+  "description": "Nyx browser — fast, private, yours",
   "main": "out/main/index.js",
   "author": "Joel Lewis",
   "private": true,
@@ -10,7 +10,53 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
-    "rebuild": "electron-rebuild -f -w better-sqlite3"
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "dist": "electron-vite build && electron-builder --mac dmg"
+  },
+  "build": {
+    "appId": "com.nyx.electron",
+    "productName": "Nyx",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "identity": null,
+      "category": "public.app-category.productivity",
+      "extendInfo": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "Web URLs",
+            "CFBundleURLSchemes": ["http", "https"]
+          }
+        ],
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeName": "HTML document",
+            "CFBundleTypeRole": "Viewer",
+            "LSItemContentTypes": ["public.html", "public.xhtml"]
+          }
+        ],
+        "NSCameraUsageDescription": "Sites you allow can use the camera.",
+        "NSMicrophoneUsageDescription": "Sites you allow can use the microphone.",
+        "NSLocationWhenInUseUsageDescription": "Sites you allow can see your location."
+      },
+      "target": [
+        {
+          "target": "dmg"
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Nyx"
+    }
   },
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.18.1",
@@ -26,6 +72,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^7.0.2",
     "vite": "^7.3.6",

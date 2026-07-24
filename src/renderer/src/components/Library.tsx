@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type {
   BookmarkEntry,
+  CredentialInfo,
   DownloadInfo,
   HistoryEntry,
   LibrarySection,
@@ -22,6 +23,7 @@ const SECTIONS: { id: LibrarySection; label: string }[] = [
   { id: 'downloads', label: 'Downloads' },
   { id: 'bookmarks', label: 'Bookmarks' },
   { id: 'reading', label: 'Reading List' },
+  { id: 'passwords', label: 'Passwords' },
   { id: 'settings', label: 'Settings' }
 ]
 
@@ -48,12 +50,17 @@ export function Library(p: Props): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [entries, setEntries] = useState<HistoryEntry[]>([])
   const [bookmarks, setBookmarks] = useState<BookmarkEntry[]>([])
+  const [creds, setCreds] = useState<CredentialInfo[]>([])
+  const [revealed, setRevealed] = useState<{ id: string; password: string } | null>(null)
 
   useEffect(() => {
     if (p.section === 'history') {
       window.nyx.cmd('getHistory', { query, limit: 300 }).then(setEntries)
     } else if (p.section === 'bookmarks' || p.section === 'reading') {
       window.nyx.cmd('getBookmarks', { reading: p.section === 'reading' }).then(setBookmarks)
+    } else if (p.section === 'passwords') {
+      setRevealed(null)
+      window.nyx.cmd('getPasswords').then(setCreds)
     }
   }, [p.section, query])
 
@@ -168,6 +175,62 @@ export function Library(p: Props): React.JSX.Element {
             {bookmarkRows(bookmarks, true)}
             {bookmarks.length === 0 && (
               <div className="lib-empty">Reading list is empty — ⇧⌘D saves a page for later</div>
+            )}
+          </>
+        ) : p.section === 'passwords' ? (
+          <>
+            {creds.map((c) => (
+              <div key={c.id} className="lib-row">
+                <span className="lib-dot" />
+                <span className="lib-title">{c.origin.replace(/^https?:\/\//, '')}</span>
+                <span className="lib-detail">{c.username || '—'}</span>
+                <span className="lib-pwd">
+                  {revealed?.id === c.id ? revealed.password : '••••••••'}
+                </span>
+                <button
+                  className="lib-action"
+                  onClick={() => {
+                    if (revealed?.id === c.id) {
+                      setRevealed(null)
+                      return
+                    }
+                    void window.nyx.cmd('revealPassword', { id: c.id }).then((pwd: string | null) => {
+                      if (pwd !== null) setRevealed({ id: c.id, password: pwd })
+                    })
+                  }}
+                >
+                  {revealed?.id === c.id ? 'Hide' : 'Reveal'}
+                </button>
+                <button
+                  className="lib-action"
+                  onClick={() => void window.nyx.cmd('copyPassword', { id: c.id })}
+                >
+                  Copy
+                </button>
+                <button
+                  className="lib-del"
+                  title="Delete credential"
+                  onClick={() => {
+                    void window.nyx.cmd('deletePassword', { id: c.id }).then((ok: boolean) => {
+                      if (ok) setCreds((cur) => cur.filter((x) => x.id !== c.id))
+                    })
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {creds.length === 0 && (
+              <div className="lib-empty">
+                No saved passwords yet. Nyx offers to save logins as you sign in; ⇧⌘F fills them.
+                Import your Swift Nyx vault from Settings.
+              </div>
+            )}
+            {creds.length > 0 && (
+              <div className="set-note" style={{ padding: '14px 10px' }}>
+                Reveal, copy and delete are gated by Touch ID once per launch. ⇧⌘F fills the saved
+                login on the current site.
+              </div>
             )}
           </>
         ) : (

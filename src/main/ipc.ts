@@ -1,5 +1,6 @@
 import { clipboard, ipcMain } from 'electron'
 import {
+  NyxWindow,
   nyxWindows,
   nyxWindowFromChrome,
   broadcastState,
@@ -7,6 +8,15 @@ import {
   parseOmniboxInput,
   searchUrlFor
 } from './browser'
+import {
+  listCredentials,
+  revealPassword,
+  deleteCredential,
+  importSwiftVault,
+  gate
+} from './passwords'
+import { listProfiles, addProfile, removeProfile } from './profiles'
+import { rebuildMenu } from './menu'
 import { suggest, searchHistory, deleteEntry, clearHistory, topSites } from './history'
 import {
   getDownloads,
@@ -169,6 +179,74 @@ export function initIpc(): void {
         return null
       case 'setShelf':
         w.setShelfOpen(p['open'])
+        return null
+      case 'toggleSplit':
+        w.toggleSplit()
+        return null
+      case 'setSplitFraction':
+        w.setSplitFraction(p['fraction'])
+        return null
+      case 'toggleVertical':
+        w.toggleVertical()
+        return null
+      case 'toggleReader':
+        w.toggleReader()
+        return null
+      case 'createGroupWithTab':
+        w.createGroupWithTab(p['tabId'])
+        return null
+      case 'setTabGroup':
+        w.setTabGroup(p['tabId'], p['groupId'] ?? null)
+        return null
+      case 'renameGroup':
+        w.renameGroup(p['id'], p['name'])
+        return null
+      case 'recolorGroup':
+        w.recolorGroup(p['id'], p['color'])
+        return null
+      case 'toggleGroupCollapse':
+        w.toggleGroupCollapse(p['id'])
+        return null
+      case 'closeGroup':
+        w.closeGroup(p['id'])
+        return null
+      case 'getPasswords':
+        return listCredentials()
+      case 'revealPassword':
+        return await revealPassword(p['id'])
+      case 'copyPassword': {
+        const pwd = await revealPassword(p['id'])
+        if (pwd !== null) clipboard.writeText(pwd)
+        return pwd !== null
+      }
+      case 'deletePassword': {
+        if (!(await gate('delete a saved password'))) return false
+        deleteCredential(p['id'])
+        return true
+      }
+      case 'fillPassword':
+        return await w.fillPassword()
+      case 'importSwiftVault':
+        try {
+          return { imported: await importSwiftVault() }
+        } catch (err) {
+          return { error: err instanceof Error ? err.message : String(err) }
+        }
+      case 'getProfiles':
+        return listProfiles()
+      case 'addProfile': {
+        const profile = addProfile((p['name'] as string) || 'Profile')
+        rebuildMenu()
+        broadcastState()
+        return profile
+      }
+      case 'removeProfile':
+        removeProfile(p['id'])
+        rebuildMenu()
+        broadcastState()
+        return null
+      case 'newWindowWithProfile':
+        new NyxWindow({ profileId: p['id'] })
         return null
       default:
         console.warn('[ipc] unknown command', channel)

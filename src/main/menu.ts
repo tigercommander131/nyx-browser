@@ -2,6 +2,12 @@ import { clipboard, dialog, Menu, MenuItemConstructorOptions } from 'electron'
 import { broadcastState, focusedNyxWindow, NyxWindow } from './browser'
 import { toggleBookmark } from './bookmarks'
 import { checkForUpdates } from './updates'
+import { listProfiles } from './profiles'
+import { translatePage } from './translate'
+
+export function rebuildMenu(): void {
+  buildMenu()
+}
 
 function withWin(fn: (w: NyxWindow) => void): () => void {
   return () => {
@@ -54,6 +60,13 @@ export function buildMenu(): void {
           label: 'New Incognito Window',
           accelerator: 'Shift+Cmd+N',
           click: () => void new NyxWindow({ incognito: true })
+        },
+        {
+          label: 'New Window with Profile',
+          submenu: listProfiles().map((p) => ({
+            label: p.name,
+            click: () => void new NyxWindow({ profileId: p.id })
+          }))
         },
         { type: 'separator' },
         {
@@ -111,6 +124,12 @@ export function buildMenu(): void {
             w.setFindBarOpen(true)
             w.sendEvent({ type: 'openFindBar' })
           })
+        },
+        { type: 'separator' },
+        {
+          label: 'Fill Password',
+          accelerator: 'Shift+Cmd+F',
+          click: withWin((w) => void w.fillPassword())
         }
       ]
     },
@@ -145,6 +164,37 @@ export function buildMenu(): void {
             const wc = w.activeTab?.view?.webContents
             if (wc) wc.setZoomLevel(wc.getZoomLevel() - 0.5)
           })
+        },
+        { type: 'separator' },
+        {
+          label: 'Reader Mode',
+          accelerator: 'Alt+Cmd+R',
+          click: withWin((w) => w.toggleReader())
+        },
+        {
+          label: 'Translate Page',
+          accelerator: 'Alt+Cmd+T',
+          click: withWin((w) => {
+            const wc = w.activeTab?.view?.webContents
+            if (!wc) return
+            translatePage(wc).catch((err) => {
+              void dialog.showMessageBox(w.win, {
+                type: 'warning',
+                message: 'Translation failed',
+                detail: err instanceof Error ? err.message : String(err)
+              })
+            })
+          })
+        },
+        {
+          label: 'Toggle Split View',
+          accelerator: 'Alt+Cmd+S',
+          click: withWin((w) => w.toggleSplit())
+        },
+        {
+          label: 'Toggle Vertical Tabs',
+          accelerator: 'Shift+Cmd+L',
+          click: withWin((w) => w.toggleVertical())
         },
         { type: 'separator' },
         {

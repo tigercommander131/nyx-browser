@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   ACCENT_PRESETS,
+  ProfileInfo,
   SEARCH_ENGINES,
   Settings,
   ThemeId,
@@ -49,9 +50,13 @@ export function SettingsPanel({ settings: s }: { settings: Settings }): React.JS
   const [updates, setUpdates] = useState<UpdateStatus | null>(null)
   const [checking, setChecking] = useState(false)
   const [customAccent, setCustomAccent] = useState(s.accent)
+  const [profiles, setProfiles] = useState<ProfileInfo[]>([])
+  const [newProfile, setNewProfile] = useState('')
+  const [vaultMsg, setVaultMsg] = useState('')
 
   useEffect(() => {
     window.nyx.cmd('checkUpdates', { force: false }).then(setUpdates)
+    window.nyx.cmd('getProfiles').then(setProfiles)
   }, [])
 
   const check = (force: boolean): void => {
@@ -150,6 +155,75 @@ export function SettingsPanel({ settings: s }: { settings: Settings }): React.JS
         Notifications are always blocked. Camera, microphone, location and screen recording always
         ask first. Nyx sends no telemetry — nothing leaves this Mac.
       </div>
+
+      <h2>Passwords</h2>
+      <Row
+        label="Import from Swift Nyx"
+        hint="Reads the com.nyx.browser.vault Keychain item — macOS will ask you to Allow"
+      >
+        <button
+          className="set-btn"
+          onClick={() => {
+            setVaultMsg('Importing…')
+            window.nyx
+              .cmd('importSwiftVault')
+              .then((r: { imported?: number; error?: string }) => {
+                setVaultMsg(
+                  r.error ??
+                    (r.imported === 0
+                      ? 'Nothing new to import.'
+                      : `Imported ${r.imported} credential${r.imported === 1 ? '' : 's'}.`)
+                )
+              })
+          }}
+        >
+          Import Vault
+        </button>
+      </Row>
+      {vaultMsg && <div className="set-note">{vaultMsg}</div>}
+
+      <h2>Profiles</h2>
+      {profiles.map((pr) => (
+        <Row key={pr.id} label={pr.name} hint={pr.id === 'default' ? 'Your main profile' : undefined}>
+          <div className="profile-controls">
+            <span className="accent-dot small" style={{ background: pr.color }} />
+            {pr.id !== 'default' && (
+              <button
+                className="set-btn"
+                onClick={() => {
+                  void window.nyx.cmd('removeProfile', { id: pr.id }).then(() => {
+                    setProfiles((cur) => cur.filter((x) => x.id !== pr.id))
+                  })
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </Row>
+      ))}
+      <Row label="New profile" hint="Separate cookies, logins and storage — open via File ▸ New Window with Profile">
+        <div className="profile-controls">
+          <input
+            className="set-input"
+            placeholder="Name"
+            value={newProfile}
+            onChange={(e) => setNewProfile(e.target.value)}
+          />
+          <button
+            className="set-btn"
+            disabled={!newProfile.trim()}
+            onClick={() => {
+              void window.nyx.cmd('addProfile', { name: newProfile.trim() }).then((pr: ProfileInfo) => {
+                setProfiles((cur) => [...cur, pr])
+                setNewProfile('')
+              })
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </Row>
 
       <h2>General</h2>
       <Row label="Search engine">

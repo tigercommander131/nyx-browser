@@ -135,6 +135,17 @@ export function Toolbar(p: Props): React.JSX.Element {
       </div>
       <div className="toolbar-right">
         {p.snap.incognito && <span className="incognito-badge">Incognito</span>}
+        {p.activeTab?.readerable && (
+          <button
+            className="tb-btn"
+            onClick={() => window.nyx.cmd('toggleReader')}
+            title="Reader Mode (⌥⌘R)"
+          >
+            <svg width="15" height="15" viewBox="0 0 15 15">
+              <path d="M2.5 3h10M2.5 6h10M2.5 9h6.5M2.5 12h6.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
         <button
           className={'tb-btn shield' + (p.snap.settings.adblockEnabled ? ' on' : '')}
           onClick={() =>
