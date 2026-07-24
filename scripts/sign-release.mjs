@@ -45,3 +45,8 @@ const sig = crypto.sign(null, fs.readFileSync(zipPath), privateKey)
 fs.writeFileSync(sigPath, sig.toString('base64') + '\n')
 console.log('zip:', zipPath, `(${(fs.statSync(zipPath).size / 1e6).toFixed(1)} MB)`)
 console.log('sig:', sigPath)
+
+// Remove the unpacked .app so Spotlight/Launchpad only ever sees the one in
+// /Applications — the dmg and zip carry everything a release needs.
+fs.rmSync(path.join(root, 'dist', 'mac-arm64'), { recursive: true, force: true })
+console.log('cleaned dist/mac-arm64 (unpacked app)')
